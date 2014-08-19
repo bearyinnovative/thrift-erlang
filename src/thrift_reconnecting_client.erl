@@ -39,7 +39,7 @@
           terminate/2,
           code_change/3 ]).
 
--record( state, { client = nil, 
+-record( state, { client = nil,
                   host,
                   port,
                   thrift_svc,

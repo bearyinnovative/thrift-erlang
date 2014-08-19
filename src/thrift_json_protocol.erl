@@ -116,7 +116,7 @@ write(#json_protocol{context_stack = Stack} = State0, {enter_context, Type}) ->
         #json_context{type=Type}|Stack]},
     write_values(State2,  [list_to_binary(start_context(Type))]);
 
-% removes the topmost context from stack    
+% removes the topmost context from stack
 write(#json_protocol{context_stack = [CurrCtxt|Stack]} = State0, {exit_context}) ->
     Type = CurrCtxt#json_context.type,
     State1 = State0#json_protocol{context_stack = Stack},
@@ -125,7 +125,7 @@ write(#json_protocol{context_stack = [CurrCtxt|Stack]} = State0, {exit_context})
             {context_post_item, false}
         ]);
 
-% writes necessary prelude to field or container depending on current context   
+% writes necessary prelude to field or container depending on current context
 write(#json_protocol{context_stack = []} = This0,
     {context_pre_item, _}) -> {This0, ok};
 write(#json_protocol{context_stack = [Context|_CtxtTail]} = This0,
@@ -146,7 +146,7 @@ write(#json_protocol{context_stack = [Context|_CtxtTail]} = This0,
             {This0, ok}
     end;
 
-% writes necessary postlude to field or container depending on current context   
+% writes necessary postlude to field or container depending on current context
 write(#json_protocol{context_stack = []} = This0,
     {context_post_item, _}) -> {This0, ok};
 write(#json_protocol{context_stack = [Context|CtxtTail]} = This0,
@@ -155,9 +155,9 @@ write(#json_protocol{context_stack = [Context|CtxtTail]} = This0,
     CtxtType = Context#json_context.type,
     Rem = FieldNo rem 2,
     {This1, ok} = case {CtxtType, Rem, MayNeedQuotes} of
-        {object, 0, true} -> % non-string object key 
+        {object, 0, true} -> % non-string object key
             write(This0, <<"\":">>);
-        {object, 0, false} -> % string object key 
+        {object, 0, false} -> % string object key
             write(This0, <<":">>);
         _ -> % no pre-field necessary
             {This0, ok}
@@ -177,7 +177,7 @@ write(This0, #protocol_message_begin{
         {i32, Seqid}
     ]);
 
-write(This, message_end) ->  
+write(This, message_end) ->
     write_values(This, [{exit_context}]);
 
 % Example field expression: "1":{"dbl":3.14}
@@ -193,10 +193,10 @@ write(This0, #protocol_field_begin{
         {string, typeid_to_json(Type)}
     ]);
 
-write(This, field_stop) -> 
+write(This, field_stop) ->
     {This, ok};
 
-write(This, field_end) -> 
+write(This, field_end) ->
     write_values(This,[{exit_context}]);
 
 % Example message with map: [1,"testMap",1,0,{"1":{"map":["i32","i32",3,{"7":77,"8":88,"9":99}]}}]
@@ -212,7 +212,7 @@ write(This0, #protocol_map_begin{
         {enter_context, object}
     ]);
 
-write(This, map_end) -> 
+write(This, map_end) ->
     write_values(This,[
         {exit_context},
         {exit_context}
@@ -227,7 +227,7 @@ write(This0, #protocol_list_begin{
         {i32, Size}
     ]);
 
-write(This, list_end) -> 
+write(This, list_end) ->
     write_values(This,[
         {exit_context}
     ]);
@@ -242,17 +242,17 @@ write(This0, #protocol_set_begin{
         {i32, Size}
     ]);
 
-write(This, set_end) -> 
+write(This, set_end) ->
     write_values(This,[
         {exit_context}
     ]);
 % example message with struct: [1,"testStruct",1,0,{"1":{"rec":{"1":{"str":"worked"},"4":{"i8":1},"9":{"i32":1073741824},"11":{"i64":1152921504606847000}}}}]
-write(This, #protocol_struct_begin{}) -> 
+write(This, #protocol_struct_begin{}) ->
     write_values(This, [
         {enter_context, object}
     ]);
 
-write(This, struct_end) -> 
+write(This, struct_end) ->
     write_values(This,[
         {exit_context}
     ]);
@@ -294,7 +294,7 @@ write(This0, {string, Str}) -> write_values(This0, [
         {context_pre_item, false},
         case is_binary(Str) of
             true -> Str;
-            false -> jsx:term_to_json(list_to_binary(Str), [{strict, false}])
+            false -> jsx:decode(list_to_binary(Str), [{strict, false}])
         end,
         {context_post_item, false}
     ]);
@@ -317,7 +317,7 @@ write_values(This0, ValueList) ->
         ValueList),
     {FinalState, ok}.
 
-%% I wish the erlang version of the transport interface included a 
+%% I wish the erlang version of the transport interface included a
 %% read_all function (like eg. the java implementation). Since it doesn't,
 %% here's my version (even though it probably shouldn't be in this file).
 %%
@@ -325,10 +325,9 @@ write_values(This0, ValueList) ->
 %% Subsequent calls to read actually operate on the events returned by JSX.
 read_all(#json_protocol{transport = Transport0} = State) ->
     {Transport1, Bin} = read_all_1(Transport0, []),
-    P = jsx:parser(),
     State#json_protocol{
         transport = Transport1,
-        jsx = P(Bin)
+        jsx = jsx:decode(Bin)
     }.
 
 read_all_1(Transport0, IoList) ->
@@ -349,7 +348,7 @@ read_all_1(Transport0, IoList) ->
 expect(#json_protocol{jsx={event, {Type, Data}=Ev, Next}}=State, ExpectedType) ->
     NextState = State#json_protocol{jsx=Next()},
     case Type == ExpectedType of
-        true -> 
+        true ->
             {NextState, {ok, convert_data(Type, Data)}};
         false ->
             {NextState, {error, {unexpected_json_event, Ev}}}
@@ -379,9 +378,9 @@ expect_many_1(State, [Expected|ExpTail], ResultList, _PrevStatus) ->
 % wrapper around expect to make life easier for container opening/closing functions
 expect_nodata(This, ExpectedList) ->
     case expect_many(This, ExpectedList) of
-        {State, {ok, _}} -> 
+        {State, {ok, _}} ->
             {State, ok};
-        Error -> 
+        Error ->
             Error
     end.
 
@@ -392,7 +391,7 @@ read_field(#json_protocol{jsx={event, Field, Next}} = State) ->
 read(This0, message_begin) ->
     % call read_all to get the contents of the transport buffer into JSX.
     This1 = read_all(This0),
-    case expect_many(This1, 
+    case expect_many(This1,
             [start_array, integer, string, integer, integer]) of
         {This2, {ok, [_, Version, Name, Type, SeqId]}} ->
             case Version =:= ?VERSION_1 of
@@ -406,46 +405,46 @@ read(This0, message_begin) ->
         Other -> Other
     end;
 
-read(This, message_end) -> 
+read(This, message_end) ->
     expect_nodata(This, [end_array]);
 
-read(This, struct_begin) -> 
+read(This, struct_begin) ->
     expect_nodata(This, [start_object]);
 
-read(This, struct_end) -> 
+read(This, struct_end) ->
     expect_nodata(This, [end_object]);
 
 read(This0, field_begin) ->
-    {This1, Read} = expect_many(This0, 
+    {This1, Read} = expect_many(This0,
             [%field id
-             key, 
+             key,
              % {} surrounding field
-             start_object, 
+             start_object,
              % type of field
              key]),
     case Read of
         {ok, [FieldIdStr, _, FieldType]} ->
             {This1, #protocol_field_begin{
-                type = json_to_typeid(FieldType), 
+                type = json_to_typeid(FieldType),
                 id = list_to_integer(FieldIdStr)}}; % TODO: do we need to wrap this in a try/catch?
         {error,[{unexpected_json_event, {end_object,none}}]} ->
             {This1, #protocol_field_begin{type = ?tType_STOP}};
-        Other -> 
+        Other ->
             io:format("**** OTHER branch selected ****"),
             {This1, Other}
     end;
 
-read(This, field_end) -> 
+read(This, field_end) ->
     expect_nodata(This, [end_object]);
 
 % Example message with map: [1,"testMap",1,0,{"1":{"map":["i32","i32",3,{"7":77,"8":88,"9":99}]}}]
 read(This0, map_begin) ->
-    case expect_many(This0, 
+    case expect_many(This0,
             [start_array,
              % key type
-             string, 
+             string,
              % value type
-             string, 
+             string,
              % size
              integer,
              % the following object contains the map
@@ -457,14 +456,14 @@ read(This0, map_begin) ->
         Other -> Other
     end;
 
-read(This, map_end) -> 
+read(This, map_end) ->
     expect_nodata(This, [end_object, end_array]);
 
 read(This0, list_begin) ->
-    case expect_many(This0, 
+    case expect_many(This0,
             [start_array,
              % element type
-             string, 
+             string,
              % size
              integer]) of
         {This1, {ok, [_, Etype, Size]}} ->
@@ -474,15 +473,15 @@ read(This0, list_begin) ->
         Other -> Other
     end;
 
-read(This, list_end) -> 
+read(This, list_end) ->
     expect_nodata(This, [end_array]);
 
 % example message with set: [1,"testSet",1,0,{"1":{"set":["i32",3,1,2,3]}}]
 read(This0, set_begin) ->
-    case expect_many(This0, 
+    case expect_many(This0,
             [start_array,
              % element type
-             string, 
+             string,
              % size
              integer]) of
         {This1, {ok, [_, Etype, Size]}} ->
@@ -492,7 +491,7 @@ read(This0, set_begin) ->
         Other -> Other
     end;
 
-read(This, set_end) -> 
+read(This, set_end) ->
     expect_nodata(This, [end_array]);
 
 read(This0, field_stop) ->
@@ -502,8 +501,8 @@ read(This0, field_stop) ->
 read(This0, bool) ->
     {This1, Field} = read_field(This0),
     Value = case Field of
-        {literal, I} -> 
-            {ok, I}; 
+        {literal, I} ->
+            {ok, I};
         _Other ->
             {error, unexpected_event_for_boolean}
     end,
@@ -514,8 +513,8 @@ read(This0, byte) ->
     Value = case Field of
         {key, K} ->
             {ok, list_to_integer(K)};
-        {integer, I} -> 
-            {ok, list_to_integer(I)}; 
+        {integer, I} ->
+            {ok, list_to_integer(I)};
         _Other ->
             {error, unexpected_event_for_integer}
     end,
@@ -533,8 +532,8 @@ read(This0, i64) ->
 read(This0, double) ->
     {This1, Field} = read_field(This0),
     Value = case Field of
-        {float, I} -> 
-            {ok, list_to_float(I)}; 
+        {float, I} ->
+            {ok, list_to_float(I)};
         _Other ->
             {error, unexpected_event_for_double}
     end,
@@ -544,10 +543,10 @@ read(This0, double) ->
 read(This0, string) ->
     {This1, Field} = read_field(This0),
     Value = case Field of
-        {string, I} -> 
-            {ok, I}; 
-        {key, J} -> 
-            {ok, J}; 
+        {string, I} ->
+            {ok, I};
+        {key, J} ->
+            {ok, J};
         _Other ->
             {error, unexpected_event_for_string}
     end,
