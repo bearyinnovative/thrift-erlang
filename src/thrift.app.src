@@ -27,6 +27,7 @@
 
   % All modules used by the application.
   {modules, [
+   thrift_socket_server
    ]},
 
   % All of the registered names the application uses. This can be ignored.
