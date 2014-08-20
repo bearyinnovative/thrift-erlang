@@ -36,7 +36,6 @@
     thrift_file_transport,
     thrift_framed_transport,
     thrift_http_transport,
-    thrift_json_parser,
     thrift_json_protocol,
     thrift_memory_buffer,
     thrift_processor,
